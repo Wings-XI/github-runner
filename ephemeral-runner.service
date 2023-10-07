@@ -1,0 +1,26 @@
+# Install with:
+#   for i in `seq 1 5` ; do sudo install -m 644 ephemeral-runner.service /etc/systemd/system/ephemeral-runner-$i.service ; sudo systemctl daemon-reload ; sudo systemctl enable ephemeral-runner-$i ; sudo systemctl stop ephemeral-runner-$i ; sudo systemctl start ephemeral-runner-$i ; done
+# Run with:
+#   sudo systemctl start ephemeral-runner*
+# Stop with:
+#   sudo systemctl stop ephemeral-runner*
+# See live logs with:
+#   journalctl -f -u ephemeral-runner-X --no-hostname --no-tail
+[Unit]
+Description=Ephemeral GitHub Actions Runner Container
+#After=docker.service
+#Requires=docker.service
+[Service]
+Type=simple
+TimeoutStartSec=0
+Restart=always
+ExecStartPre=-/usr/bin/docker stop %N
+ExecStartPre=-/usr/bin/docker rm %N
+ExecStartPre=-/usr/bin/docker build --pull --tag github-runner-local -f /etc/ephemeral-runner.Dockerfile .
+ExecStart=/usr/bin/docker run --rm \
+                              --env-file /etc/ephemeral-github-actions-runner.env \
+                              -v /var/run/docker.sock:/var/run/docker.sock \
+                              --name %N \
+                              github-runner-local
+[Install]
+WantedBy=multi-user.target
